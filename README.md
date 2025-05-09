@@ -38,7 +38,7 @@ Yolov11_Tensorrt_ROS是一个基于ROS框架的实时目标检测系统，结合
 ```bash
 mkdir -p catkin_ws/src
 cd catkin_ws/src
-git clone https://github.com/your_username/Yolov11_Tensorrt_ROS.git
+git clone https://github.com/WHDworld/Yolov11_Tensorrt_ROS.git
 cd ..
 catkin_make
 source devel/setup.bash
@@ -47,7 +47,6 @@ source devel/setup.bash
 2. 下载预训练模型：
 
 将YOLOv11预训练模型(.onnx格式)放入指定目录，并在配置文件中指定路径。
-
 3. 配置参数：
 
 编辑配置文件`config/config.yaml`，设置模型路径、检测阈值和其他参数。
@@ -73,26 +72,26 @@ source ./start.sh
 
 ```yaml
 yolov11_tensorrt_config:
-  trtFile: "path/to/your/model.trt"  # TensorRT引擎文件路径
-  onnxFile: "path/to/your/model.onnx"  # ONNX模型文件路径
+  trtFile: "path/to/your/model.trt"  # TensorRT引擎文件路径,如果没有程序在第一次运行时会自动生成（需要等待较长时间，生成的文件目录与onnxFile一致）
+  onnxFile: "path/to/your/model.onnx"  # ONNX模型文件路径，如果没有.onnx格式模型，可以使用目录./onnx/export.py文件将自己的模型导出为.onnx格式
   kGpuId: 0  # GPU设备ID
   kNmsThresh: 0.45  # NMS阈值
   kConfThresh: 0.25  # 置信度阈值
   kNumClass: 80  # 类别数量
-  kInputH: 640  # 输入图像高度
-  kInputW: 640  # 输入图像宽度
+  kInputH: 640  # 推理时的图像高度，需与./onnx/export.py中的imgsz保持一致
+  kInputW: 640  # 推理时的图像宽度，需与./onnx/export.py中的imgsz保持一致
   kMaxNumOutputBbox: 1000  # 最大输出边界框数量
   kNumBoxElement: 7  # 每个边界框元素数量
   use_FP16_Mode: 1  # 是否使用FP16模式
   use_INT8_Mode: 0  # 是否使用INT8模式
-  cacheFile: "path/to/calibration.cache"  # INT8校准缓存文件
-  calibrationDataPath: "path/to/calibration/images"  # 校准图像路径
+  cacheFile: "path/to/calibration.cache"  # INT8校准缓存文件，使用use_INT8_Mode时需要设置
+  calibrationDataPath: "path/to/calibration/images"  # 校准图像路径，使用use_INT8_Mode时需要设置
   vClassNames: ["person", "bicycle", "car", ...]  # 类别名称列表
 ```
 
 ### 发布的话题
 
-- `/yolo_detector/detected_image`: 可视化后的检测结果图像
+- `/yolo_detector/detected_image`: 可视化后的检测结果图像，默认frame_link为camera_link
 - `/yolo_detector/detected_bounding_boxes`: 检测到的边界框信息
 - `/yolo_detector/yolo_time`: 检测耗时信息
 
