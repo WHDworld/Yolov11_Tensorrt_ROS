@@ -106,7 +106,6 @@ void YoloDetector::read_config_file(ros::NodeHandle &nh)
     image_topic_ = (std::string)fsSettings["image_topic"];
     image_path_ = (std::string)fsSettings["image_path"];
     use_ros_ = (int)fsSettings["use_ros"];
-    depth_image_topic_ = (std::string)fsSettings["depth_image_topic"];
 }
 
 void YoloDetector::inference_image(std::string &image_path)
@@ -305,6 +304,37 @@ std::vector<Detection> YoloDetector::inference(cv::Mat &img)
     return vDetections;
 }
 
+vision_msgs::Detection2DArray YoloDetector::convertDetectionsToROS(
+    const std::vector<Detection> &detections,
+    const std::string &frame_id)
+{
+    vision_msgs::Detection2DArray detection_array;
+
+    // 设置消息头
+    detection_array.header.stamp = ros::Time::now();
+    detection_array.header.frame_id = frame_id;
+
+    // 遍历检测结果
+    for (const auto &det : detections)
+    {
+        vision_msgs::Detection2D detection_msg;
+
+        // 边界框转换
+        vision_msgs::BoundingBox2D bbox;
+        bbox.center.x = (det.bbox[0] + det.bbox[2]) / 2.0f; // 中心点x
+        bbox.center.y = (det.bbox[1] + det.bbox[3]) / 2.0f; // 中心点y
+        bbox.size_x = det.bbox[2] - det.bbox[0];            // 宽度
+        bbox.size_y = det.bbox[3] - det.bbox[1];            // 高度
+
+        detection_msg.bbox = bbox;
+
+        // 添加到检测数组
+        detection_array.detections.push_back(detection_msg);
+    }
+
+    return detection_array;
+}
+
 void YoloDetector::draw_image(cv::Mat &img, std::vector<Detection> &inferResult)
 {
     // draw inference result on image
@@ -340,23 +370,13 @@ void YoloDetector::registerPub()
 
 void YoloDetector::registerCallback()
 {
-    image_transport::TransportHints hints("raw", ros::TransportHints().tcpNoDelay(true));
-    it_ = new image_transport::ImageTransport(this->nh_);
-    img_sub_ = new image_transport::SubscriberFilter(*it_, image_topic_, 1000, hints);
-    depth_img_sub_ = new image_transport::SubscriberFilter(*it_, depth_image_topic_, 1000, hints);
-    sync = new message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image>(*img_sub_, *depth_img_sub_, 1000);
-    sync->registerCallback(boost::bind(&YoloDetector::depthImagesCallback, this, _1, _2));
-
-    // this->detection_Timer_ = this->nh_.createTimer(ros::Duration(0.033), &YoloDetector::detection_timer, this);
-    // this->vis_Timer_ = this->nh_.createTimer(ros::Duration(0.033), &YoloDetector::vis_timer, this);
-    // this->bbox_Timer_ = this->nh_.createTimer(ros::Duration(0.033), &YoloDetector::bbox_timer, this);
+    this->image_sub = this->nh_.subscribe(this->image_topic_, 100, &YoloDetector::image_callback, this);
 }
 
-void YoloDetector::depthImagesCallback(const sensor_msgs::ImageConstPtr img_msg, const sensor_msgs::ImageConstPtr depth)
+void YoloDetector::image_callback(const sensor_msgs::ImageConstPtr img_msg)
 {
     auto _orig_image = getImageFromMsg(img_msg);
-    auto _orig_depth_image = getImageFromMsg(depth);
-    VisualImageDesc visual_imagedesc(img_msg->header.stamp, _orig_image->image, _orig_depth_image->image);
+    VisualImageDesc visual_imagedesc(img_msg->header.stamp, _orig_image->image);
     std::lock_guard<std::mutex> lock(image_mutex);
     image_buf.emplace(visual_imagedesc);
 }
@@ -374,7 +394,7 @@ void YoloDetector::process_Image_Thread()
             }
             VisualImageDesc _current_frame = image_buf.front();
             image_buf.pop();
-            detection_inference(_current_frame);
+            this->detection_inference(_current_frame);
         }
     }
 }
@@ -391,10 +411,12 @@ void YoloDetector::detection_inference(VisualImageDesc &_current_frame)
     std_msgs::Float32 cost_msg;
     cost_msg.data = detect_time_;
     detected_time_pub.publish(cost_msg);
-
+    auto ros_detections = this->convertDetectionsToROS(result, "camera_link");
+    detected_boxes_pub.publish(ros_detections);
     cv::Mat tmp_image;
     tmp_image = _current_frame.raw_image.clone(); // 复制需要显示的图像[8](@ref)
-    draw_image(tmp_image, result);
+    
+    this->draw_image(tmp_image, result);
     sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", tmp_image).toImageMsg();
     detected_image_pub.publish(msg);
 }
