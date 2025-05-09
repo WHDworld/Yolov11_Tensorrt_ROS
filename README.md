@@ -92,7 +92,7 @@ yolov11_tensorrt_config:
 
 ### 发布的话题
 
-- `/yolo_detector/detected_image`: 可视化后的检测结果图像，默认frame_link为camera_link
+- `/yolo_detector/detected_image`: 可视化后的检测结果图像，默认frame_id为camera_link
 - `/yolo_detector/detected_bounding_boxes`: 检测到的边界框信息
 - `/yolo_detector/yolo_time`: 检测耗时信息
 
