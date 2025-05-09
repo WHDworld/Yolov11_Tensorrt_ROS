@@ -47,6 +47,7 @@ source devel/setup.bash
 2. 下载预训练模型：
 
 将YOLOv11预训练模型(.onnx格式)放入指定目录，并在配置文件中指定路径。
+
 3. 配置参数：
 
 编辑配置文件`config/config.yaml`，设置模型路径、检测阈值和其他参数。
