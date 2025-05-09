@@ -73,7 +73,7 @@ source ./start.sh
 
 ```yaml
 yolov11_tensorrt_config:
-  trtFile: "path/to/your/model.trt"  # TensorRT引擎文件路径,如果没有程序在第一次运行时会自动生成（需要等待较长时间，生成的文件目录在设置的output_path目录下）
+  trtFile: "path/to/your/model.trt"  # TensorRT引擎文件路径,如果没有程序在第一次运行时会自动生成（需要等待较长时间，生成的文件目录在设置的output_path/onnx_model目录下）
   onnxFile: "path/to/your/model.onnx"  # ONNX模型文件路径，如果没有.onnx格式模型，可以使用目录./onnx/export.py文件将自己的模型导出为.onnx格式
   kGpuId: 0  # GPU设备ID
   kNmsThresh: 0.45  # NMS阈值
